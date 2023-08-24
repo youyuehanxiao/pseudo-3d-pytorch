@@ -59,7 +59,7 @@ class Bottleneck(nn.Module):
                 stride_p = 1
             self.conv1 = nn.Conv3d(inplanes, planes, kernel_size=1, bias=False, stride=stride_p) #3D卷积通道降维
             #print(n_s, '层，步长：', stride_p, stride)
-            #self.conv1 = nn.Conv3d(inplanes, planes, kernel_size=1, bias=False, stride=(stride_p, stride, stride))  # 3D卷积通道降维
+            #self.conv1 = nn.Conv3d(inplanes, planes, kernel_size=1, bias=False, stride=(stride_p, stride, stride)) #3D卷积通道降维
             self.bn1 = nn.BatchNorm3d(planes)
         else: #2D卷积层
             # if n_s == self.depth_3d: #2D卷积层顶层
@@ -67,8 +67,8 @@ class Bottleneck(nn.Module):
             # else:
             #     stride_p = 1
             # self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False, stride=stride_p) #2D卷积通道降维
-            print(n_s, '层，步长：', stride_p, stride)
-            self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False, stride=stride)  # 2D卷积通道降维
+            #print(n_s, '层，步长：', stride_p, stride)
+            self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False, stride=stride) #2D卷积通道降维
             self.bn1 = nn.BatchNorm2d(planes)
         # self.conv2 = nn.Conv3d(planes, planes, kernel_size=3, stride=stride,
         #                        padding=1, bias=False)
@@ -138,15 +138,15 @@ class Bottleneck(nn.Module):
     def forward(self, x):
         residual = x
         #输出2D-3D转折时的特征尺寸
-        if self.id == self.depth_3d:
-            print('2D卷积最第一层输入尺寸：', x.shape)
+        #if self.id == self.depth_3d:
+            #print('2D卷积最第一层输入尺寸：', x.shape)
 
         out = self.conv1(x) #点卷积，通道降维（衔接层，空间维度缩小1/2，时间维度不变；其它层各维度均不变）
         out = self.bn1(out)
         out = self.relu(out)
 
-        if self.id == self.depth_3d:
-            print('2D卷积第一层输出尺寸：', out.shape)
+        #if self.id == self.depth_3d:
+            #print('2D卷积第一层输出尺寸：', out.shape)
 
         # out = self.conv2(out)
         # out = self.bn2(out)
@@ -314,7 +314,7 @@ class P3D(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        print('第一层输入尺寸：', x.size())
+        #print('第一层输入尺寸：', x.size())
 
         #顶层卷积，通道维度升到初始设定值64，空间维度缩小1/2（160->80)，时间维度不变
         x = self.conv1_custom(x)
@@ -323,27 +323,27 @@ class P3D(nn.Module):
 
         #顶层池化，时间维度缩小1/2（16->8），空间维度缩小1/2（80->40）
         x = self.maxpool(x)
-        print('第一层输出尺寸：', x.size())
+        #print('第一层输出尺寸：', x.size())
 
         #第2层卷积+池化，时间维度缩小1/2（8->4池化时缩小，卷积时不变），空间维度不变
         x = self.maxpool_2(self.layer1(x))  #  Part Res2
-        print('第二层输出尺寸：', x.size())
+        #print('第二层输出尺寸：', x.size())
 
-        ##第3层卷积+池化，时间维度缩小1/2（4->2池化时缩小，卷积时不变），空间维度缩小1/2（40->20卷积时缩小，池化时不变）
+        #第3层卷积+池化，时间维度缩小1/2（4->2池化时缩小，卷积时不变），空间维度缩小1/2（40->20卷积时缩小，池化时不变）
         x = self.maxpool_2(self.layer2(x))  #  Part Res3
-        print('第三层输出尺寸：', x.size())
+        #print('第三层输出尺寸：', x.size())
 
-        # 第3层卷积+池化，时间维度缩小1/2（2->1池化时缩小，卷积时不变），空间维度缩小1/2（20->10卷积时缩小，池化时不变）
+        #第3层卷积+池化，时间维度缩小1/2（2->1池化时缩小，卷积时不变），空间维度缩小1/2（20->10卷积时缩小，池化时不变）
         x = self.maxpool_2(self.layer3(x))  #  Part Res4
-        print('第四层输出尺寸：', x.size())
+        #print('第四层输出尺寸：', x.size())
 
         sizes = x.size()
-        print('3D卷积最后一层输出尺寸：', sizes)
+        #print('3D卷积最后一层输出尺寸：', sizes)
 
         #将5维的张量变形为4维（此方法会将不同样本的图像整合成同一个样本的不同通道，造成数据混乱；可以根据通道，依次采取每个样本的所有通道作为一个新的样本数据；
-        # 但是，如果当前时间维度为1，则不会受影响，所以要根据数据样本尺寸设计合理的网络模型，使得在进行转换时的样本时间维度是1）
+        #但是，如果当前时间维度为1，则不会受影响，所以要根据数据样本尺寸设计合理的网络模型，使得在进行转换时的样本时间维度是1）
         x = x.view(-1, sizes[1], sizes[3], sizes[4])  #  Part Res5，将x从5维变成4维，保留原来的通道数和空间维度
-        print('2D卷积第一层输入尺寸：', x.size())
+        #print('2D卷积第一层输入尺寸：', x.size())
 
         #最后一层卷积（2D卷积），空间维度缩小1/2（10->5）
         x = self.layer4(x)
@@ -468,7 +468,7 @@ def get_optim_policies(model=None, modality='RGB', enable_pbn=True):
 
 if __name__ == '__main__':
 
-    model = P3D199(pretrained=False, num_classes=400)
+    model = P3D199(pretrained=False, num_classes=101)
     model = model.cuda()
     data = torch.autograd.Variable(torch.rand(2, 3, 16, 160, 160)).cuda()   # if modality=='Flow', please change the 2nd dimension 3==>2
     out = model(data)

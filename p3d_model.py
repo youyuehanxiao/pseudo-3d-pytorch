@@ -285,7 +285,7 @@ def P3D131(**kwargs):
 def P3D199(pretrained=False,modality='RGB',**kwargs):
     """construct a P3D199 model based on a ResNet-152-3D model.
     """
-    model = P3D(Bottleneck, [3, 8, 36, 3], modality=modality,**kwargs)
+    model = P3D(Bottleneck, [3, 8, 36, 3], modality=modality, **kwargs)
     if pretrained==True:
         if modality=='RGB':
             pretrained_file='p3d_rgb_199.checkpoint.pth.tar'
