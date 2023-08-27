@@ -55,7 +55,7 @@ from torch.utils.data import DataLoader, Dataset
 
 class VideoDataset(Dataset):
     def __init__(self, video_root:str, split_root:str, clip_crop_size:tuple, resize:tuple,
-                 mode:str, num_mode:int|tuple|list, video_type='RGB', clip_type_param=('sec', 3)):
+                 mode:str, num_mode:int|tuple|list, video_type='RGB', clip_type_param=('rand', 2)):
         '''
         :param video_root: 视频数据根目录
         :param split_root: 划分数据的文件根目录
@@ -76,8 +76,12 @@ class VideoDataset(Dataset):
 
         #创建类（别名->数字编号）的映射字典、视频文件名（路径）列表、视频对应标签名列表
         self.dict_class_name_id, self.list_video_filename, self.list_label_name = self.create_list_dataproperty(video_root, split_root)
+        #self.list_video_filename = self.list_video_filename[0:100]
+        #self.list_label_name = self.list_label_name[0:100]
         #加载视频对应标签id（数字编号）列表
         self.list_label_id = self.create_list_label_id()
+        #创建每个类别对应样本数目的字典
+        self.dict_num_everylabel = self.countnum_ererylabel(self.num_class)
 
     #根据索引，加载视频数据和对应标签
     def __getitem__(self, index):
@@ -94,7 +98,7 @@ class VideoDataset(Dataset):
         return len(self.list_video_filename)
 
     #创建类别（名称-编号）映射字典、文件名（路径）列表、对应类别名称列表
-    def create_list_dataproperty(self, root:str, path:str) -> (dict,list,list):
+    def create_list_dataproperty(self, root:str, path:str) -> tuple[dict,list,list]:
         '''
         :param root: 视频源文件存放的根目录
         :param path: 划分数据的文件根目录
@@ -185,7 +189,8 @@ class VideoDataset(Dataset):
         #定义对每一帧图像进行的处理操作
         transform = transforms.Compose([
             transforms.Resize((self.resize[0], self.resize[1])), #图像缩放
-            transforms.RandomCrop((self.clip_crop_size[1], self.clip_crop_size[2])) if self.mode == 'train' else None, #训练集随机裁剪，测试无操作
+            transforms.RandomCrop((self.clip_crop_size[1], self.clip_crop_size[2])) if self.mode == 'train' else
+            transforms.Resize((self.clip_crop_size[1], self.clip_crop_size[2])), #训练集随机裁剪，测试集无操作
             transforms.ToTensor(), #转换成0.0-1.0的张量
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]) if self.video_type == 'RGB' else
             transforms.Normalize(0.5, 0.5) #标准化
@@ -229,7 +234,7 @@ class VideoDataset(Dataset):
             list_video = self.clip_section(frames, frame_count, num_clip=self.clip_crop_size[0],
                                            num_section=self.clip[1], transform=transform)
         elif self.clip[0] == 'rand': #随机剪辑
-            list_video = self.clip_random(frames, frame_count,num_clip=self.clip_crop_size[0],
+            list_video = self.clip_random(frames, frame_count, num_clip=self.clip_crop_size[0],
                                           step_choice=self.clip[1], transform=transform)
         else:
             print('不被支持的剪辑类型：', self.clip[0])
@@ -330,11 +335,37 @@ class VideoDataset(Dataset):
         #从start_id开始，按照步长step_choice从前往后依次进行帧选取和处理
         for i in range(start_id, end_id, step_choice):
             #处理当前帧
-            frame_p = transform(Image.fromarray(cv2.cvtColor(frames[i], cv2.COLOR_BGR2RGB if self.video_type == 'RGB' else None)))
+            frame_p = transform(Image.fromarray(cv2.cvtColor(frames[i], cv2.COLOR_BGR2RGB if self.video_type == 'RGB'
+            else cv2.COLOR_BGR2GRAY)))
             #将当前帧添加到剪辑列表
             list_video.append(frame_p)
 
         return list_video
+
+    #统计每个类别的样本数目
+    def countnum_ererylabel(self, num_class: int):
+        '''
+        :param num_class: 类别数目
+        :return dict_num:everylabel: 每个类别id对应样本数目的字典，长度为num_class
+        '''
+        # 初始化字典
+        dict_num_everylabel = {}
+        for id in range(num_class):
+            dict_num_everylabel[id] = 0
+
+        # 统计每个类别的数目
+        for label in self.list_label_id:
+            dict_num_everylabel[label] += 1
+
+        return dict_num_everylabel
+
+        # 获取类别总数
+
+    #获取类别数目
+    @property
+    def num_class(self):
+        return len(self.dict_class_name_id)
+
 
 
 
@@ -343,8 +374,13 @@ if __name__ == '__main__':
     video_root = 'D:/Machine learning/视频特征提取/datasets/UTF-101/Videos'
     split_root = 'D:/Machine learning/视频特征提取/datasets/UTF-101/Train_Test_list'
     mydata = VideoDataset(video_root=video_root, split_root=split_root, clip_crop_size=(16, 160, 160), resize=(182, 242),
-                          mode='train', num_mode=(1, 2, 3), video_type='RGB', clip_type_param=('sec', 3))
-    mydata_loader = DataLoader(mydata, batch_size=100, shuffle=True)
+                          mode='test', num_mode=1, video_type='RGB', clip_type_param=('rand', 2))
+    mydata_loader = DataLoader(mydata, batch_size=100, shuffle=False)
+
+    # print(f'数据总量：{mydata.__len__()}；类别数目：{mydata.num_class}')
+    # print(f'每个类别的数目：{mydata.dict_num_everylabel}')
+    # print(sum(mydata.dict_num_everylabel.values()))
+    #print(mydata.__len__())
     time1 = time.time()
     for batch, (data, label) in enumerate(mydata_loader):
         print(f'第{batch}批：{data.size(), label}')
