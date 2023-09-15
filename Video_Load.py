@@ -1,12 +1,12 @@
 '''
-一、UTF-101视频数据存放目录：
-1. 数据根目录：D:/Machine learning/视频特征提取/datasets/UTF-101
-2. 视频资源目录：UTF-101/Videos
+一、UCF-101视频数据存放目录：
+1. 数据根目录：D:/Machine learning/视频特征提取/datasets/UCF-101
+2. 视频资源目录：UCF-101/Videos
     2.1. Videos目录下有101个子目录，子目录下分别存放101个类别的视频，每个子目录名称为视频类别名
-3. 训练集-测试集划分文件的目录：UTF-101/Train_Test_list
+3. 训练集-测试集划分文件的目录：UCF-101/Train_Test_list
     3.1. Train_Test_list目录下有7个文件：3个训练集文件（存放训练集视频路径和类别编号）、3个测试集文件（存放测试集视频路径，没有类别编号）、1个类别标签文件（存放标签名-编号映射）
 
-二、UTF-101数据加载：
+二、UCF-101数据加载：
 1. 创建（类别-编号）映射字典dict_class_name_id
 2. 创建训练集文件列表list_train_filename（存储训练集文件路径）、对应标签名列表list_train_classname和对应标签编号列表list_train_classid
 3. 创建测试集文件列表list_test_filename（存储测试集文件路径）、对应标签名列表list_test_classname和对应标签编号列表list_test_classid
@@ -368,11 +368,9 @@ class VideoDataset(Dataset):
 
 
 
-
-
 if __name__ == '__main__':
-    video_root = 'D:/Machine learning/视频特征提取/datasets/UTF-101/Videos'
-    split_root = 'D:/Machine learning/视频特征提取/datasets/UTF-101/Train_Test_list'
+    video_root = 'D:/Machine learning/视频特征提取/datasets/UCF-101/Videos'
+    split_root = 'D:/Machine learning/视频特征提取/datasets/UCF-101/Train_Test_list'
     mydata = VideoDataset(video_root=video_root, split_root=split_root, clip_crop_size=(16, 160, 160), resize=(182, 242),
                           mode='test', num_mode=1, video_type='RGB', clip_type_param=('rand', 2))
     mydata_loader = DataLoader(mydata, batch_size=100, shuffle=False)

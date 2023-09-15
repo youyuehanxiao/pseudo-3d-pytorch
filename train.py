@@ -1,7 +1,7 @@
 '''
 模型训练
 模型：P3D
-数据集：UTF-101
+数据集：UCF-101
 '''
 import os
 import sys
@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 import torch
-from p3d_model_notes import P3D199
+from p3d_model_notes import P3D199, P3D63
 from Video_Load import VideoDataset
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -102,11 +102,11 @@ class Train(ABC):
     def train(self):
         pass
 
-#UTF-101视频数据，P3D模型训练
-class UTF101_train(Train):
+#UCF-101视频数据，P3D模型训练
+class UCF101_train(Train):
     def __init__(self, video_root:str, split_root:str, clip_crop_size=(16, 160, 160), resize=(182, 242),
                                   num_mode=1, video_type='RGB', clip_type_param=('rand', 2), **kwargs):
-        super(UTF101_train, self).__init__(**kwargs)
+        super(UCF101_train, self).__init__(**kwargs)
         self.video_root = video_root #视频数据根目录
         self.split_root = split_root #数据划分文件根目录
         self.clip_crop_size = clip_crop_size #剪辑后大小
@@ -243,16 +243,17 @@ class UTF101_train(Train):
             if test_acc > max_acc:
                 max_acc = test_acc
                 best_epoch = epoch + 1
-                best_params = self.module.state_dict()
+                #best_params = self.module.state_dict()
+                self.save_data_to_file({'weight': self.module.state_dict()}, './result', f'weight_{best_epoch}.pth')
         #存储最优参数到pth文件
-        self.save_data_to_file({'weight': best_params}, './result', f'weight_{best_epoch}.pth')
+        #self.save_data_to_file({'weight': best_params}, './result', f'weight_{best_epoch}.pth')
 
         print('训练结束！')
         print(f'best_epoch：{best_epoch}  max_acc：{max_acc}')
 
 def main():
-    video_root = 'D:/Machine learning/视频特征提取/datasets/UTF-101/Videos' #视频数据根目录
-    split_root = 'D:/Machine learning/视频特征提取/datasets/UTF-101/Train_Test_list' #训练集测试集划分文件根目录
+    video_root = 'D:/Machine learning/视频特征提取/datasets/UCF-101/Videos' #视频数据根目录
+    split_root = 'D:/Machine learning/视频特征提取/datasets/UCF-101/Train_Test_list' #训练集测试集划分文件根目录
 
     # #加载训练集
     # train_data = VideoDataset(video_root, split_root, clip_crop_size=(16, 160, 160), resize=(182, 242),
@@ -269,7 +270,8 @@ def main():
     print(f'use device：{device}')
 
     #定义模型并加入设备
-    module = P3D199(pretrained=False, modality='RGB', num_classes=101).to(device)
+    #module = P3D199(pretrained=False, modality='RGB', num_classes=101).to(device)
+    module = P3D63(modality='RGB', num_classes=101).to(device)
 
     #定义损失函数
     loss_func = nn.CrossEntropyLoss() #交叉熵损失
@@ -284,7 +286,8 @@ def main():
     #     os.mkdir(result_savepath)
 
     #训练过程
-    train = UTF101_train(video_root, split_root, module=module, optimizer=optimizer, loss_func=loss_func, device=device)
+    train = UCF101_train(video_root, split_root, module=module, optimizer=optimizer,
+                         loss_func=loss_func, batchsize=2, device=device)
 
 
 
