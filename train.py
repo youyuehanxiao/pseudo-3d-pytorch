@@ -257,6 +257,27 @@ class UCF101_train(Train):
         print('训练结束！')
         print(f'best_epoch：{best_epoch}  max_acc：{max_acc}')
 
+    #推理
+    def infer(self, weight):
+        #加载权重
+        self.module.load_state_dict(weight, strict=True)
+        self.module.to(self.device)
+
+        #推理
+        self.module.eval() #推理测试模式
+        infer_acc_num = 0 #记录推理测试过程预测正确的数量
+        #开始推理测试
+        infer_bar = tqdm(self.test_loader, file=sys.stdout, ncols=80) #创建推理测试进度条
+        with torch.no_grad():
+            for video, labels in infer_bar:
+                out = self.module(video.to(self.device)) #预测
+                pre_class = torch.max(out, dim=1)[1] #预测类别
+                infer_acc_num += torch.eq(pre_class, labels.to(self.device)).sum().item() #预测正确的数目
+                infer_bar.desc = f'infer acc num:{infer_acc_num}'
+        #计算准确率
+        infer_acc = round(infer_acc_num / self.test_data.__len__(), 3)
+        print(f'infer_acc:{infer_acc}')
+
 def main():
     video_root = 'D:/Machine learning/视频特征提取/datasets/UCF-101/Videos' #视频数据根目录
     split_root = 'D:/Machine learning/视频特征提取/datasets/UCF-101/Train_Test_list' #训练集测试集划分文件根目录
@@ -295,6 +316,8 @@ def main():
     train = UCF101_train(video_root, split_root, module=module, optimizer=optimizer,
                          loss_func=loss_func, batchsize=2, device=device)
     train.train()
+    # weight_dict = torch.load('./result_noa/weight_85.pth').get('weight')
+    # train.infer(weight_dict)
 
     #测试保存文件
     # data = {'age': [1, 2, 3]}
