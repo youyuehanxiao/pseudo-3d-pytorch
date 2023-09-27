@@ -57,15 +57,21 @@ class Train(ABC):
             #以追加方式打开指定excel文件，若文件不存在，新建文件
             with pd.ExcelWriter(path, mode='a', if_sheet_exists='overlay') as wt:
                 if write_type == 'row':  # 按行追加
-                    new_data.to_excel(wt, sheet_name=sheet_name, index=False, header=False,
-                                      startrow=wt.book[sheet_name].max_row + 1, startcol=0)  # 在行末尾追加新数据
+                    try:
+                        new_data.to_excel(wt, sheet_name=sheet_name, index=False, header=False,
+                                        startrow=wt.book[sheet_name].max_row + 1, startcol=0)  # 在行末尾追加新数据
+                    except KeyError: #指定sheet_name不存在
+                        new_data.to_excel(wt, sheet_name=sheet_name, index=False, header=True)  # 新建sheet_name，并写入数据
                 elif write_type == 'column':  # 按列追加
-                    new_data.to_excel(wt, sheet_name=sheet_name, index=False, header=True,
-                                      startrow=0, startcol=wt.book[sheet_name].max_column + 1)  # 在行末尾追加新数据
+                    try:
+                        new_data.to_excel(wt, sheet_name=sheet_name, index=False, header=True,
+                                          startrow=0, startcol=wt.book[sheet_name].max_column + 1)  # 在行末尾追加新数据
+                    except KeyError:
+                        new_data.to_excel(wt, sheet_name=sheet_name, index=False, header=True)  # 新建sheet_name，并写入数据
                 else:
                     print('未被实现的追加方式！')
                     sys.exit(-1)
-        except: #指定文件不存在，创建文件并保存数据
+        except FileNotFoundError or FileExistsError: #指定文件不存在，创建文件并保存数据
             with pd.ExcelWriter(path, mode='w') as wt:
                 new_data.to_excel(wt, sheet_name=sheet_name, index=False, header=True) #第一次添加新数据，写入头部属性名
 
@@ -123,7 +129,7 @@ class UCF101_train(Train):
         #创建测试结果字典
         self.dict_test_result = self.create_dict_test_result()
         #训练过程
-        self.train()
+        #self.train()
 
     #创建测试结果字典
     def create_dict_test_result(self):
@@ -271,7 +277,7 @@ def main():
 
     #定义模型并加入设备
     #module = P3D199(pretrained=False, modality='RGB', num_classes=101).to(device)
-    module = P3D63(modality='RGB', num_classes=101).to(device)
+    module = P3D199(modality='RGB', num_classes=101).to(device)
 
     #定义损失函数
     loss_func = nn.CrossEntropyLoss() #交叉熵损失
@@ -288,10 +294,18 @@ def main():
     #训练过程
     train = UCF101_train(video_root, split_root, module=module, optimizer=optimizer,
                          loss_func=loss_func, batchsize=2, device=device)
+    train.train()
+
+    #测试保存文件
+    # data = {'age': [1, 2, 3]}
+    # data2 = {'age': [4, 5, 6]}
+    # train.save_data_to_file(data=data2, save_path='./', filename='bbb.xlsx', sheet_name='Sheet2')
 
 
 
 if __name__ == '__main__':
     main()
+
+
 
 
